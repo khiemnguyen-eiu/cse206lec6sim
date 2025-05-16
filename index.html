@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RAM Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: blueviolet;
+        }
+
+        .bit-toggle {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            margin: 2px;
+            border-radius: 50%;
+            background-color: grey;
+            cursor: pointer;
+        }
+
+        .bit-toggle-address {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            margin: 2px;
+            border-radius: 50%;
+            background-color: grey;
+            cursor: pointer;
+        }
+
+        .bit-toggle32 {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            margin: 2px;
+            border-radius: 50%;
+            background-color: grey;
+            cursor: pointer;
+        }
+
+        .bit-toggle-address32 {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            margin: 2px;
+            border-radius: 50%;
+            background-color: grey;
+            cursor: pointer;
+        }
+
+        .bit-on {
+            background-color: green;
+        }
+
+        .output {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .memory {
+            margin-top: 20px;
+            white-space: pre;
+            background: #f0f0f0;
+            padding: 10px;
+            font-family: monospace;
+        }
+
+        .address-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ram-container">
+        <h1>16x8 RAM Simulator</h1>
+
+        <label>Address (0-15):</label>
+        <div class="address-container">
+            <input type="number" id="address" min="0" max="15" oninput="updateAddressBits()" value="0">
+            <div id="addressBits"></div>
+        </div>
+
+        <label>Data In (click to toggle bits):</label>
+        <div id="dataInToggles"></div>
+
+        <label>Write Enable:</label>
+        <input type="checkbox" id="writeEnable">
+
+        <button onclick="clock()">Clock Pulse</button>
+
+        <!-- break new lines -->
+        <br>
+        <br>
+        <hr>
+
+        <div class="output">
+            Data Out: <span id="dataOut">--------</span>
+        </div>
+
+        <div class="memory">
+            <h3>Addresses Contents</h3>
+            <div id="memoryDump"></div>
+        </div>
+    </div>
+
+
+    <!-- break new lines -->
+    <br>
+    <br>
+    <br>
+    <br>
+
+    <div class="ram-container">
+        <h1>32x8 RAM Simulator</h1>
+        <label>Address (0-31): </label>
+        <div class="address-container">
+            <input type="number" id="address32" min="0" max="31" oninput="updateAddressBits32()" value="0">
+            <div id="addressBits32"></div>
+        </div>
+
+        <label>Data In (click to toggle bits):</label>
+        <div id="dataInToggles32"></div>
+
+        <label>Write Enable:</label>
+        <input type="checkbox" id="writeEnable32">
+
+        <button onclick="clock32()">Clock Pulse</button>
+
+        <!-- break new lines -->
+        <br>
+        <br>
+        <hr>
+
+        <div class="output">
+            Data Out: <span id="dataOut32">--------</span>
+        </div>
+
+        <div class="memory">
+            <h3>Addresses  Contents</h3>
+            <div id="memoryDump32"></div>
+        </div>
+    </div>
+
+    <script>
+        class RAM16x8 {
+            constructor() {
+                this.memory = Array.from({ length: 16 }, () => Array(8).fill(0));
+                this.writeEnable = 0;
+                this.address = 0;
+                this.dataIn = Array(8).fill(0);
+                this.dataOut = Array(8).fill(0);
+            }
+
+            setAddress(addr) {
+                if (addr >= 0 && addr < 16) this.address = addr;
+                else alert("Invalid address (must be 0-15)");
+            }
+
+            setDataIn(bits) {
+                if (bits.length !== 8) {
+                    alert("Data must be 8 bits");
+                    return;
+                }
+                this.dataIn = bits.map(b => b & 1);
+            }
+
+            setWriteEnable(enable) {
+                this.writeEnable = enable ? 1 : 0;
+            }
+
+            clock() {
+                if (this.writeEnable) {
+                    this.memory[this.address] = [...this.dataIn];
+                }
+                this.dataOut = [...this.memory[this.address]];
+            }
+
+            getDataOut() {
+                return this.dataOut.join('');
+            }
+
+            dumpMemory() {
+                return this.memory.map((row, i) => {
+                    const prefix = (i === this.address) ? "--->" : "    ";
+                    return `${prefix}  ${i.toString(2).padStart(4, '0')}: ${row.join('')}`;
+                }).join('\n');
+            }
+        }
+
+        const ram = new RAM16x8();
+
+        function clock() {
+            const addr = parseInt(document.getElementById("address").value);
+            const writeEnable = document.getElementById("writeEnable").checked;
+            const dataBits = Array.from(document.querySelectorAll(".bit-toggle"), el => el.classList.contains("bit-on") ? 1 : 0);
+
+            ram.setAddress(addr);
+            ram.setDataIn(dataBits);
+            ram.setWriteEnable(writeEnable);
+            ram.clock();
+
+            document.getElementById("dataOut").innerText = ram.getDataOut();
+            document.getElementById("memoryDump").innerText = ram.dumpMemory();
+        }
+
+        function createBitToggles() {
+            const container = document.getElementById("dataInToggles");
+            for (let i = 0; i < 8; i++) {
+                const div = document.createElement("div");
+                div.classList.add("bit-toggle");
+                div.dataset.index = i;
+                div.addEventListener("click", () => {
+                    div.classList.toggle("bit-on");
+                });
+                container.appendChild(div);
+            }
+        }
+
+        function updateAddressBits() {
+            const addr = parseInt(document.getElementById("address").value) || 0;
+            const binary = addr.toString(2).padStart(4, '0');
+            const container = document.getElementById("addressBits");
+            container.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                const circle = document.createElement("div");
+                circle.className = 'bit-toggle-address';
+                if (binary[i] === '1') circle.classList.add("bit-on");
+                container.appendChild(circle);
+            }
+
+
+            ram.setAddress(addr);
+            document.getElementById("memoryDump").innerText = ram.dumpMemory();
+        }
+
+        createBitToggles();
+        updateAddressBits();
+        clock(); // Initialize memory display
+
+        class RAM32x8 {
+            constructor() {
+                this.memory = Array.from({ length: 32 }, () => Array(8).fill(0));
+                this.writeEnable = 0;
+                this.address = 0;
+                this.dataIn = Array(8).fill(0);
+                this.dataOut = Array(8).fill(0);
+            }
+
+            setAddress(addr) {
+                if (addr >= 0 && addr < 32) this.address = addr;
+                else alert("Invalid address (must be 0-31)");
+            }
+
+            setDataIn(bits) {
+                if (bits.length !== 8) {
+                    alert("Data must be 8 bits");
+                    return;
+                }
+                this.dataIn = bits.map(b => b & 1);
+            }
+
+            setWriteEnable(enable) {
+                this.writeEnable = enable ? 1 : 0;
+            }
+
+            clock() {
+                if (this.writeEnable) {
+                    this.memory[this.address] = [...this.dataIn];
+                }
+                this.dataOut = [...this.memory[this.address]];
+            }
+
+            getDataOut() {
+                return this.dataOut.join('');
+            }
+
+            dumpMemory() {
+                return this.memory.map((row, i) => {
+                    const prefix = (i === this.address) ? "--->" : "    ";
+                    return `${prefix}  ${i.toString(2).padStart(5, '0')}: ${row.join('')}`;
+                }).join('\n');
+            }
+        }
+
+        const ram32 = new RAM32x8();
+
+        function clock32() {
+            const addr = parseInt(document.getElementById("address32").value);
+            const writeEnable = document.getElementById("writeEnable32").checked;
+            const dataBits = Array.from(document.querySelectorAll(".bit-toggle32"), el => el.classList.contains("bit-on") ? 1 : 0);
+
+            ram32.setAddress(addr);
+            ram32.setDataIn(dataBits);
+            ram32.setWriteEnable(writeEnable);
+            ram32.clock();
+
+            document.getElementById("dataOut32").innerText = ram32.getDataOut();
+            document.getElementById("memoryDump32").innerText = ram32.dumpMemory();
+        }
+
+        function createBitToggles32() {
+            const container = document.getElementById("dataInToggles32");
+            for (let i = 0; i < 8; i++) {
+                const div = document.createElement("div");
+                div.classList.add("bit-toggle32");
+                div.dataset.index = i;
+                div.addEventListener("click", () => {
+                    div.classList.toggle("bit-on");
+                });
+                container.appendChild(div);
+            }
+        }
+
+        function updateAddressBits32() {
+            const addr = parseInt(document.getElementById("address32").value) || 0;
+            const binary = addr.toString(2).padStart(5, '0');
+            const container = document.getElementById("addressBits32");
+            container.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const circle = document.createElement("div");
+                circle.className = 'bit-toggle-address32';
+                if (binary[i] === '1') circle.classList.add("bit-on");
+                container.appendChild(circle);
+            }
+
+            ram32.setAddress(addr);
+            document.getElementById("memoryDump32").innerText = ram32.dumpMemory();
+        }
+
+        createBitToggles32();
+        updateAddressBits32();
+        clock32();
+
+    </script>
+</body>
+
+</html>
